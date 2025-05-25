@@ -1,4 +1,4 @@
-version: '3.3'
+version: '3.9'
 
 # Перечень volume
 volumes:
@@ -9,26 +9,33 @@ volumes:
 services:
 
   foodgram_db:
-    image: postgres:17.4
+    image: postgres:13
     env_file: ../.env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB} # Название базы данных
+      POSTGRES_USER: ${POSTGRES_USER} # Имя пользователя
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD} # Пароль пользователя
     volumes:
       - pg_data:/var/lib/postgresql/data
+
   # Имя и описание контейнера с бэкендом
   foodgram_backend:
-    build: ../backend/
+    build:
+      context: ../backend/
     env_file: ../.env
     depends_on:
       - foodgram_db
     volumes:
       - staticfiles:/backend_static/
       - mediafiles:/app/media/
-  
+
   frontend:
     container_name: foodgram-front
-    build: ../frontend
+    build:
+      context: ../frontend
     volumes:
       - ../frontend/:/app/result_build/
-      - staticfiles:/frontend_static 
+      - staticfiles:/frontend_static
 
   nginx:
     container_name: foodgram-proxy
