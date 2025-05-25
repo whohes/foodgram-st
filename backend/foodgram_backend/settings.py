@@ -52,7 +52,7 @@ DJOSER = {
         "user_list": ["rest_framework.permissions.AllowAny"],
         "user": [
             "users.permissions.IsAuthenticatedOrReadOnlyForMe"
-        ],
+        ],  # кастомный permission
     },
     "SERIALIZERS": {
         "user": "users.serializers.CustomUserSerializer",
