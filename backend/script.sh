@@ -7,8 +7,8 @@ python manage.py makemigrations urlshortner
 python manage.py migrate
 
 echo 'Collecting static files...'
-python manage.py collectstatic --no-input 
-sh -c "cp -r /app/collected_static/ /backend_static/static/"
+python manage.py collectstatic --no-input
+cp -r /app/static/. /backend_static/static/
 
 echo 'Loading ingredients...'
 python manage.py load_ingredients
