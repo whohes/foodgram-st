@@ -1,9 +1,19 @@
-from djoser.serializers import UserSerializer
+from djoser.serializers import UserSerializer, UserCreateSerializer
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 
 from users.models import CustomUser, Subscription
 from recipes.models import Recipe
+
+
+class CustomUserCreateSerializer(UserCreateSerializer):
+    class Meta(UserCreateSerializer.Meta):
+        model = CustomUser
+        fields = ('email', 'id', 'username', 'first_name',
+                 'last_name', 'password')
+        extra_kwargs = {
+            'password': {'write_only': True}
+        }
 
 
 class CustomUserSerializer(UserSerializer):
@@ -18,10 +28,10 @@ class CustomUserSerializer(UserSerializer):
                   'last_name', 'avatar', 'is_subscribed')
 
     def get_is_subscribed(self, obj):
-        user = self.context.get('request').user
-        if user.is_anonymous:
+        request = self.context.get('request')
+        if not request or request.user.is_anonymous:
             return False
-        return Subscription.objects.filter(user=user, following=obj).exists()
+        return Subscription.objects.filter(user=request.user, following=obj).exists()
 
     def get_avatar(self, obj):
         if obj.avatar:
@@ -71,6 +81,8 @@ class SubscriptionUserSerializer(serializers.ModelSerializer):
 
     def get_recipes(self, obj):
         request = self.context.get('request')
+        if not request:
+            return []
         try:
             limit = int(request.query_params.get('recipes_limit'))
         except (ValueError, TypeError):

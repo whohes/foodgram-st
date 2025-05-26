@@ -2,6 +2,8 @@ import json
 import os
 from django.core.management.base import BaseCommand
 from recipes.models import Recipe, Ingredient, IngredientInRecipe
+from django.db import models
+from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.core.files.images import ImageFile
 
@@ -27,7 +29,8 @@ class Command(BaseCommand):
                 name=recipe_data['name'],
                 text=recipe_data['text'],
                 cooking_time=recipe_data['cooking_time'],
-                author=author
+                author=author,
+                pub_date=timezone.now()
             )
 
             if recipe_data.get('image'):

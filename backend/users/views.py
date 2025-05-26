@@ -6,7 +6,7 @@ from rest_framework import serializers
 from django.shortcuts import get_object_or_404
 
 from api.pagination import UserPagination
-from .serializers import AvatarSerializer, SubscriptionUserSerializer
+from .serializers import AvatarSerializer, SubscriptionUserSerializer, CustomUserSerializer
 from .models import CustomUser, Subscription
 
 
@@ -15,8 +15,21 @@ class CustomUserViewSet(DjoserUserViewSet):
 
     def get_permissions(self):
         if self.action in ['retrieve', 'list']:
-            return (permissions.IsAuthenticatedOrReadOnly(), )
+            return [permissions.IsAuthenticatedOrReadOnly()]
         return super().get_permissions()
+
+    @action(
+        detail=False,
+        methods=['get'],
+        permission_classes=[permissions.IsAuthenticated],
+        url_path='me'
+    )
+    def me(self, request, *args, **kwargs):
+        serializer = CustomUserSerializer(
+            request.user,
+            context={'request': request}
+        )
+        return Response(serializer.data)
 
     def perform_create(self, serializer, *args, **kwargs):
         data = serializer.validated_data

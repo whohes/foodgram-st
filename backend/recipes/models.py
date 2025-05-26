@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator
+from django.utils import timezone
 
 from users.models import CustomUser
 from .const import (
@@ -37,6 +38,7 @@ class Recipe(models.Model):
         "Время приготовления", validators=[MinValueValidator(MIN_COOKING_TIME)]
     )
     ingredients = models.ManyToManyField(Ingredient, through="IngredientInRecipe")
+    pub_date = models.DateTimeField("Дата публикации", default=timezone.now)
 
     class Meta:
         ordering = ["name"]

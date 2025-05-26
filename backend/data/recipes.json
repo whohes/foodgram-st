@@ -1,0 +1,77 @@
+[
+  {
+    "name": "Омлет",
+    "text": "Простой омлет из яиц и молока.",
+    "cooking_time": 10,
+    "author": "vasya",
+    "ingredients": [
+      {
+        "name": "яйца куриные",
+        "amount": 2
+      },
+      {
+        "name": "молоко",
+        "amount": 100
+      }
+    ],
+    "image": "recipes/omlet.jpg"
+  },
+  {
+    "name": "Курица гриль",
+    "text": "Замечательная курица гриль.",
+    "cooking_time": 120,
+    "author": "vasya",
+    "ingredients": [
+      {
+        "name": "курица",
+        "amount": 800
+      },
+      {
+        "name": "базилик свежий",
+        "amount": 25
+      },
+      {
+        "name": "орегано сушеный",
+        "amount": 10
+      },
+      {
+        "name": "растительное масло рафинированное",
+        "amount": 25
+      },
+      {
+        "name": "горчица",
+        "amount": 50
+      }
+    ],
+    "image": "recipes/chicken.jpg"
+  },
+  {
+    "name": "Салат",
+    "text": "Вкусный летний салат.",
+    "cooking_time": 20,
+    "author": "ivan",
+    "ingredients": [
+      {
+        "name": "яйцо куриное",
+        "amount": 1
+      },
+      {
+        "name": "огурцы",
+        "amount": 100
+      },
+      {
+        "name": "помидоры",
+        "amount": 100
+      },
+      {
+        "name": "салат листовой",
+        "amount": 20
+      },
+      {
+        "name": "бальзамический соус",
+        "amount": 15
+      }
+    ],
+    "image": "recipes/salad.jpg"
+  }
+]
