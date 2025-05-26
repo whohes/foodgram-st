@@ -4,11 +4,13 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework import serializers
 from django.shortcuts import get_object_or_404
+import logging
 
 from api.pagination import UserPagination
 from .serializers import AvatarSerializer, SubscriptionUserSerializer, CustomUserSerializer
 from .models import CustomUser, Subscription
 
+logger = logging.getLogger(__name__)
 
 class CustomUserViewSet(DjoserUserViewSet):
     pagination_class = UserPagination
@@ -25,11 +27,27 @@ class CustomUserViewSet(DjoserUserViewSet):
         url_path='me'
     )
     def me(self, request, *args, **kwargs):
-        serializer = CustomUserSerializer(
-            request.user,
-            context={'request': request}
-        )
-        return Response(serializer.data)
+        try:
+            logger.debug(f"User requesting /me/: {request.user}")
+            logger.debug(f"Auth header: {request.headers.get('Authorization')}")
+            
+            if request.user.is_anonymous:
+                return Response(
+                    {"detail": "Authentication credentials were not provided."},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+            
+            serializer = CustomUserSerializer(
+                request.user,
+                context={'request': request}
+            )
+            return Response(serializer.data)
+        except Exception as e:
+            logger.error(f"Error in me view: {str(e)}")
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     def perform_create(self, serializer, *args, **kwargs):
         data = serializer.validated_data

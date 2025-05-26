@@ -1,9 +1,34 @@
 import os
 from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Log environment variables at startup
+logger.info("Starting Django application with the following configuration:")
+logger.info(f"DEBUG: {os.getenv('DEBUG', 'False')}")
+logger.info(f"ALLOWED_HOSTS: {os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost')}")
+logger.info(f"DB_HOST: {os.getenv('DB_HOST', 'localhost')}")
+logger.info(f"DB_PORT: {os.getenv('DB_PORT', '5432')}")
+logger.info(f"POSTGRES_DB: {os.getenv('POSTGRES_DB', 'foodgram')}")
+
+# Logging environment variables
+env_vars = {
+    'DEBUG': os.getenv('DEBUG'),
+    'SECRET_KEY': os.getenv('SECRET_KEY'),
+    'ALLOWED_HOSTS': os.getenv('ALLOWED_HOSTS'),
+    'POSTGRES_DB': os.getenv('POSTGRES_DB'),
+    'POSTGRES_USER': os.getenv('POSTGRES_USER'),
+    'DB_HOST': os.getenv('DB_HOST'),
+    'DB_PORT': os.getenv('DB_PORT'),
+}
+
+print("Environment variables:")
+for key, value in env_vars.items():
+    print(f"{key}: {value}")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -164,6 +189,28 @@ DJOSER = {
     'USERNAME_RESET_CONFIRM_URL': '#/username/reset/confirm/{uid}/{token}',
     'ACTIVATION_URL': '#/activate/{uid}/{token}',
     'SEND_ACTIVATION_EMAIL': False,
+}
+
+# Logging configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
 }
 
 # CORS settings
