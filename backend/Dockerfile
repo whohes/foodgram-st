@@ -1,25 +1,11 @@
-# Используем базовый образ Python
-FROM python:3.10-slim
+FROM python:3.13
 
-# Устанавливаем системные зависимости
-RUN apt-get update && apt-get install -y \
-    gcc \
-    libpq-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# Устанавливаем рабочую директорию
 WORKDIR /app
 
-# Копируем файл зависимостей
 COPY requirements.txt .
 
-# Устанавливаем Python-зависимости
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt --no-cache-dir
 
-# Копируем весь проект в контейнер
 COPY . .
 
-# Сборка статических файлов, миграции и запуск приложения
-CMD ["sh", "-c", "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn app.wsgi:application --bind 0.0.0.0:8000"]
+CMD [ "gunicorn", "--bind", "0.0.0.0:8000", "foodgram_backend.wsgi"]

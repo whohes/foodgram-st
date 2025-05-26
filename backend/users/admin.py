@@ -1,12 +1,18 @@
 from django.contrib import admin
-from .models import CustomUser
+from django.contrib.auth.admin import UserAdmin
+
+from .models import CustomUser, Subscription
 
 
-class CustomUserAdmin(admin.ModelAdmin):
-    list_display = ("username", "email", "first_name", "last_name", "date_joined")
+@admin.register(CustomUser)
+class CustomUserAdmin(UserAdmin):
+    model = CustomUser
+    fieldsets = UserAdmin.fieldsets + (
+        ('Дополнительно', {'fields': ('avatar',)}),
+    )
 
-    # Поиск по юзернейму и почте
-    search_fields = ("username", "email")
 
-
-admin.site.register(CustomUser, CustomUserAdmin)
+@admin.register(Subscription)
+class SubscriptionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'following')
+    search_fields = ('user__username', 'following__username')

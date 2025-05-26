@@ -1,84 +1,51 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-from django.contrib.auth import get_user_model
 from django.core.validators import RegexValidator
+
+from .const import USERNAME_MAX_LENGTH
 
 
 class CustomUser(AbstractUser):
-    """
-    Модель пользователя с расширенными полями.
-
-    Атрибуты:
-        username (str): Уникальное имя пользователя.
-        email (str): Уникальный адрес электронной почты,
-                     используется для входа.
-        first_name (str): Имя пользователя.
-        last_name (str): Фамилия пользователя.
-        avatar (ImageField): Аватар пользователя.
-    """
-
+    avatar = models.ImageField(
+        upload_to='users/avatars/',
+        default=None,
+        null=True
+    )
+    email = models.EmailField(unique=True)
     username = models.CharField(
-        max_length=150,
+        max_length=USERNAME_MAX_LENGTH,
         unique=True,
         validators=[
             RegexValidator(
-                regex=r"^[\w.@+-]+$",
-                message="Username может содержать только буквы, цифры и @.+-_",
+                regex=(r"^[\w.@+-]+$"),
+                message=(
+                    "Имя пользователя может содержать только буквы, "
+                    "цифры и знаки @/./+/-/_"
+                ),
+                code="invalid_username",
             )
         ],
-        verbose_name="Имя пользователя",
     )
 
-    email = models.EmailField("Адрес электронной почты", unique=True,
-                              max_length=254)
-
-    first_name = models.CharField("Имя", max_length=150)
-
-    last_name = models.CharField("Фамилия", max_length=150)
-
-    avatar = models.ImageField(upload_to="users/avatars/",
-                               null=True, blank=True)
-
-    USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["username", "first_name", "last_name", "password"]
-
-    class Meta:
-        ordering = ["-date_joined"]
-        verbose_name = "Пользователь"
-        verbose_name_plural = "Пользователи"
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ('username', 'first_name', 'last_name')
 
     def __str__(self):
-        """Возвращает строковое представление имени пользователя."""
         return self.username
 
 
-User = get_user_model()
-
-
 class Subscription(models.Model):
-    """
-    Модель подписки между пользователями.
-
-    Атрибуты:
-        subscriber (FK): Пользователь, который подписывается.
-        author (FK): Пользователь, на которого подписываются.
-    """
-
-    subscriber = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="subscriptions"
-    )
-
-    author = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="subscribers"
-    )
+    user = models.ForeignKey(
+        CustomUser, on_delete=models.CASCADE, related_name='subscriptions')
+    following = models.ForeignKey(
+        CustomUser, on_delete=models.CASCADE, related_name='followers')
 
     class Meta:
+        verbose_name = 'Подписка'
+        verbose_name_plural = 'Подписки'
+        ordering = ['user']
         constraints = [
             models.UniqueConstraint(
-                fields=["subscriber", "author"], name="unique_subscription"
-            ),
-            models.CheckConstraint(
-                check=~models.Q(subscriber=models.F("author")),
-                name="no_self_subscription",
-            ),
+                fields=['user', 'following'], name='unique user following'
+            )
         ]

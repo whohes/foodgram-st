@@ -1,280 +1,119 @@
-import base64
+from rest_framework import viewsets
 from rest_framework.decorators import action
-from django.db.models import Prefetch
-from rest_framework import viewsets, status, serializers
-from django.shortcuts import redirect, get_object_or_404
 from rest_framework.response import Response
-from django.contrib.auth import get_user_model
-from rest_framework.permissions import IsAuthenticated
+from rest_framework import permissions, status
+from django_filters.rest_framework import DjangoFilterBackend
+from django.shortcuts import get_object_or_404
 from django.http import HttpResponse
+from django.db.models import Sum
 
+from urlshortner.utils import shorten_url
 
-from .models import (Recipe, Ingredient, IngredientInRecipe,
-                     ShoppingCart, Favorite)
-from .serializers import (
-    RecipeSerializer,
-    IngredientSerializer,
-)
-from .paginators import CustomPagination
-from .permissions import RecipePermission
-from .filters import IngredientSearchFilter
-
-User = get_user_model()
+from .filters import IngredientSearchFilter, RecipeFilter
+from .serializers import IngredientSerializer, RecipeSerializer
+from .models import Favorite, Ingredient, IngredientInRecipe, Recipe, ShoppingCart
+from api.permissions import IsAuthorOrReadOnly
+from api.pagination import UserPagination
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    ViewSet для просмотра ингредиентов.
-    """
-
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
+    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
     pagination_class = None
     filter_backends = (IngredientSearchFilter,)
-    search_fields = ('^name',)
+    search_fields = ("^name",)
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet для управления рецептами.
-    """
-
+    queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
-    pagination_class = CustomPagination
-    permission_classes = [RecipePermission]
-
-    def get_queryset(self):
-        """
-        Фильтрует по автору, статусу избранного и статусу списка покупок.
-        Возвращает queryset рецептов с предварительной выборкой ингредиентов.
-        """
-        queryset = Recipe.objects.all()
-        user = self.request.user
-        params = self.request.query_params
-
-        # Фильтрация по автору
-        if author_id := params.get("author"):
-            author = get_object_or_404(User, id=author_id)
-            queryset = queryset.filter(author=author)
-
-        # Фильтрация по избранному
-        if params.get("is_favorited") == "1":
-            if user.is_authenticated:
-                queryset = queryset.filter(favorited_by__user=user)
-
-        # Фильтрация по списку покупок
-        if params.get("is_in_shopping_cart") == "1":
-            if user.is_authenticated:
-                queryset = queryset.filter(shoppingcart__user=user)
-
-        # Оптимизированный prefetch для ингредиентов
-        prefetch = Prefetch(
-            "ingredients_in_recipe",
-            queryset=IngredientInRecipe.objects.select_related("ingredient"),
-        )
-
-        return (
-            queryset.select_related("author").prefetch_related(
-                prefetch).distinct()
-        )
-
-    def get_serializer_context(self):
-        """
-        Добавляет информацию о пользователе (избранные и корзина) в контекст.
-        """
-        context = super().get_serializer_context()
-        user = self.request.user
-
-        if user.is_authenticated:
-            # Одним запросом получаем все ID избранных рецептов
-            context["user_favorites"] = set(
-                Favorite.objects.filter(user=user).values_list("recipe_id",
-                                                               flat=True)
-            )
-
-            # Одним запросом получаем все ID рецептов в корзине
-            context["user_cart_items"] = set(
-                ShoppingCart.objects.filter(user=user).values_list(
-                    "recipe_id", flat=True
-                )
-            )
-
-        return context
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        try:
-            serializer.is_valid(raise_exception=True)
-        except serializers.ValidationError as e:
-            return Response({"errors": e.detail},
-                            status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            # На случай других ошибок (например, 404 при get_object_or_404)
-            return Response({"errors": str(e)},
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(
-            serializer.data, status=status.HTTP_201_CREATED, headers=headers
-        )
+    pagination_class = UserPagination
+    permission_classes = (IsAuthorOrReadOnly,)
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = RecipeFilter
 
     def perform_create(self, serializer):
-        """
-        Сохранить новый рецепт с текущим юзером как автором.
-        """
         serializer.save(author=self.request.user)
 
-    @action(detail=True, methods=["get"], url_path="get-link")
-    def get_short_link(self, request, pk=None):
-        """
-        Генерация короткой ссылки на конкретный рецепт.
-        """
-        recipe = self.get_object()
-        code = base64.urlsafe_b64encode(str(
-            recipe.id).encode()).decode().rstrip("=")
-        return Response(
-            {"short-link": f"{request.build_absolute_uri('/')}foodgram/{code}"}
-        )
-
-    @action(
-        detail=True,
-        methods=["post", "delete"],
-        permission_classes=[IsAuthenticated],
-        url_path="favorite",
-    )
-    def favorite_action(self, request, pk=None):
-        """
-        Добавление/удаление рецепта из избранного.
-        """
-        return self._handle_recipe_action(
-            request,
-            model=Favorite,
-            errors_already_exists="Рецепт уже в избранном",
-            errors_not_exists="Рецепта нет в избранном",
-        )
-
-    @action(
-        detail=True,
-        methods=["post", "delete"],
-        permission_classes=[IsAuthenticated],
-        url_path="shopping_cart",
-    )
-    def shopping_cart_action(self, request, pk=None):
-        """
-        Добавление/удаление рецепта из списка покупок.
-        """
-        return self._handle_recipe_action(
-            request,
-            model=ShoppingCart,
-            errors_already_exists="Рецепт уже в списке покупок",
-            errors_not_exists="Рецепта нет в списке покупок",
-        )
-
-    def _handle_recipe_action(
-        self, request, model, errors_already_exists, errors_not_exists
-    ):
-        """
-        Общая логика для добавления/удаления рецепта.
-        """
-        recipe = self.get_object()
-        user = request.user
-
+    def add_delete_recipe(self, request, user, recipe, model):
+        obj = model.objects.filter(user=user, recipe=recipe).first()
         if request.method == "POST":
-            if model.objects.filter(user=user, recipe=recipe).exists():
-                return Response(
-                    {"errors": errors_already_exists},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
+            if obj:
+                return Response(status=status.HTTP_400_BAD_REQUEST)
             model.objects.create(user=user, recipe=recipe)
             return Response(
-                {
+                data={
                     "id": recipe.id,
                     "name": recipe.name,
-                    "image": (
-                        request.build_absolute_uri(recipe.image.url)
-                        if recipe.image
-                        else None
-                    ),
+                    "image": recipe.image.url,
                     "cooking_time": recipe.cooking_time,
                 },
                 status=status.HTTP_201_CREATED,
             )
 
-        elif request.method == "DELETE":
-            obj = model.objects.filter(user=user, recipe=recipe).first()
-            if not obj:
-                return Response(
-                    {"errors": errors_not_exists},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
+        if obj:
             obj.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
 
     @action(
-        detail=False,
+        methods=["post", "delete"],
+        detail=True,
+        permission_classes=(permissions.IsAuthenticated,),
+        url_path="favorite",
+    )
+    def favorite(self, request, pk=None):
+        user = request.user
+        recipe = get_object_or_404(Recipe, id=pk)
+        return self.add_delete_recipe(request, user, recipe, Favorite)
+
+    @action(
+        methods=["post", "delete"],
+        detail=True,
+        permission_classes=(permissions.IsAuthenticated,),
+        url_path="shopping_cart",
+    )
+    def shopping_cart(self, request, pk=None):
+        user = request.user
+        recipe = get_object_or_404(Recipe, id=pk)
+        return self.add_delete_recipe(request, user, recipe, ShoppingCart)
+
+    @action(methods=["get"], detail=True, url_path="get-link")
+    def get_short_link(self, request, pk=None):
+        get_object_or_404(Recipe, id=pk)
+        default_link = request.build_absolute_uri(f"/api/recipes/{pk}/")
+        short_link = shorten_url(url=default_link, is_permanent=False)
+        return Response(data={"short-link": short_link})
+
+    @action(
         methods=["get"],
-        permission_classes=[IsAuthenticated],
+        detail=False,
         url_path="download_shopping_cart",
+        permission_classes=(permissions.IsAuthenticated,),
     )
     def download_shopping_cart(self, request):
-        """
-        Скачать список покупок в формате TXT.
-        Доступно только авторизованным пользователям.
-        """
-        user = request.user
+        recipes = Recipe.objects.filter(in_cart__user=request.user)
 
-        # Получаем все рецепты в корзине пользователя
-        cart_recipes = Recipe.objects.filter(
-            shoppingcart__user=user).prefetch_related(
-            "ingredients_in_recipe__ingredient"
+        ingredients = (
+            IngredientInRecipe.objects.filter(recipe__in=recipes)
+            .values("ingredient__name", "ingredient__measurement_unit")
+            .annotate(total_amount=Sum("amount"))
+            .order_by("ingredient__name")
         )
 
-        # Собираем ингредиенты с суммарным количеством
-        ingredients = {}
-        for recipe in cart_recipes:
-            for ingredient_in_recipe in recipe.ingredients_in_recipe.all():
-                ingredient = ingredient_in_recipe.ingredient
-                amount = ingredient_in_recipe.amount
+        shopping_list = []
+        for item in ingredients:
+            name = item["ingredient__name"]
+            unit = item["ingredient__measurement_unit"]
+            amount = item["total_amount"]
+            shopping_list.append(f"{name} ({unit}) - {amount}")
 
-                if ingredient.id not in ingredients:
-                    ingredients[ingredient.id] = {
-                        "name": ingredient.name,
-                        "measurement_unit": ingredient.measurement_unit,
-                        "amount": 0,
-                    }
-                ingredients[ingredient.id]["amount"] += amount
+        if not shopping_list:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
-        # Формируем текстовый файл
-        content = "Список покупок:\n\n"
-        for ingredient in ingredients.values():
-            content += (
-                f"{ingredient['name']} "
-                f"({ingredient['measurement_unit']}) - "
-                f"{ingredient['amount']}\n"
-            )
-
-        # Создаем HTTP-ответ с файлом
+        content = "\n".join(shopping_list)
+        filename = "shopping_list.txt"
         response = HttpResponse(content, content_type="text/plain")
-        response[
-            "Content-Disposition"] = 'attachment; filename="shopping_list.txt"'
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
         return response
-
-
-def redirect_short_link(request, code):
-    """
-    Перенаправление на конкретный рецепт на основе сгенерированного кода
-    короткой ссылки.
-    """
-    try:
-        padding = len(code) % 4
-        if padding:
-            code += "=" * (4 - padding)
-
-        recipe_id = int(base64.urlsafe_b64decode(code.encode()).decode())
-        recipe = Recipe.objects.get(pk=recipe_id)
-        return redirect(f"/recipes/{recipe.id}/")
-    except (ValueError, Recipe.DoesNotExist):
-        return Response({"error": "Not found"}, status=404)

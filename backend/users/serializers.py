@@ -1,121 +1,84 @@
-import base64
 from djoser.serializers import UserSerializer
+from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
-from django.core.files.base import ContentFile
-from django.contrib.auth import get_user_model
 
-from .models import Subscription
+from users.models import CustomUser, Subscription
 from recipes.models import Recipe
-from recipes.base_serializers import ShortRecipeSerializer
-
-User = get_user_model()
-
-
-class Base64ImageField(serializers.ImageField):
-    """
-    Поле для сериализатора, для изображения в формате base64.
-    """
-
-    def to_internal_value(self, data):
-        if isinstance(data, str) and data.startswith("data:image"):
-            try:
-                format, imgstr = data.split(";base64,")
-                ext = format.split("/")[-1]
-                decoded_file = base64.b64decode(imgstr)
-
-                # Генерация уникального имени файла
-                file_name = f"avatar_{hash(imgstr)}.{ext}"
-
-                return ContentFile(decoded_file, name=file_name)
-            except (ValueError, AttributeError, TypeError):
-                raise serializers.ValidationError("Некорректный формат base64")
-        return super().to_internal_value(data)
-
-
-class AvatarSerializer(serializers.ModelSerializer):
-    """
-    Сериализатор для загрузки аватара пользователя.
-    """
-
-    avatar = Base64ImageField(required=True)
-
-    class Meta:
-        model = User
-        fields = ("avatar",)
 
 
 class CustomUserSerializer(UserSerializer):
-    """
-    Сериализатор для пользователя с дополнительной
-    информацией о подписках и аватаре.
-    """
-
     is_subscribed = serializers.SerializerMethodField()
     avatar = serializers.SerializerMethodField()
+    first_name = serializers.CharField(required=True)
+    last_name = serializers.CharField(required=True)
 
     class Meta(UserSerializer.Meta):
-        fields = (
-            "email",
-            "id",
-            "username",
-            "first_name",
-            "last_name",
-            "is_subscribed",
-            "avatar",
-        )
-        read_only_fields = ("username",)
+        model = CustomUser
+        fields = ('id', 'email', 'username', 'first_name',
+                  'last_name', 'avatar', 'is_subscribed')
 
     def get_is_subscribed(self, obj):
-        """
-        Проверяет, подписан ли текущий пользователь на данного пользователя.
-        """
-        request = self.context.get("request")
-        if request and request.user.is_authenticated:
-            return Subscription.objects.filter(
-                subscriber=request.user, author=obj
-            ).exists()
-        return False
+        user = self.context.get('request').user
+        if user.is_anonymous:
+            return False
+        return Subscription.objects.filter(user=user, following=obj).exists()
 
     def get_avatar(self, obj):
-        """
-        Возвращает URL аватара пользователя.
-        """
         if obj.avatar:
             return obj.avatar.url
         return None
 
 
-class SubscriptionSerializer(CustomUserSerializer):
-    """
-    Сериализатор для подписок с дополнительной информацией о рецептах автора.
-    """
+class AvatarSerializer(serializers.ModelSerializer):
+    avatar = Base64ImageField(required=True)
 
+    class Meta:
+        model = CustomUser
+        fields = ('avatar',)
+
+    def update(self, instance, validated_data):
+        avatar = validated_data.get('avatar')
+        if avatar is None:
+            raise serializers.ValidationError(
+                {'avatar': 'Avatar is required.'}
+            )
+
+        instance.avatar = avatar
+        instance.save()
+        return instance
+
+
+class ShortRecipeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Recipe
+        fields = ('id', 'name', 'image', 'cooking_time',)
+
+
+class SubscriptionUserSerializer(serializers.ModelSerializer):
+    is_subscribed = serializers.SerializerMethodField()
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
 
-    class Meta(CustomUserSerializer.Meta):
-        fields = CustomUserSerializer.Meta.fields + ("recipes", "recipes_count")
+    class Meta:
+        model = CustomUser
+        fields = (
+            'email', 'id', 'username', 'first_name',
+            'last_name', 'is_subscribed', 'recipes', 'recipes_count', 'avatar'
+        )
+
+    def get_is_subscribed(self, obj):
+        return True
 
     def get_recipes(self, obj):
-        """
-        Возвращает рецепты автора с возможностью ограничения количества.
-        """
-
-        request = self.context.get("request")
-        recipes = Recipe.objects.filter(author=obj)
-
-        # Ограничение количества рецептов по параметру запроса
-        recipes_limit = request.query_params.get("recipes_limit") if request else None
-        if recipes_limit and recipes_limit.isdigit():
-            recipes = recipes[: int(recipes_limit)]
-
-        return ShortRecipeSerializer(
-            recipes, many=True, context={"request": request}
-        ).data
+        request = self.context.get('request')
+        try:
+            limit = int(request.query_params.get('recipes_limit'))
+        except (ValueError, TypeError):
+            limit = None
+        recipes = obj.recipes.all()
+        if limit:
+            recipes = recipes[:limit]
+        return ShortRecipeSerializer(recipes, many=True, context=self.context).data
 
     def get_recipes_count(self, obj):
-        """
-        Возвращает общее количество рецептов автора.
-        """
-
         return obj.recipes.count()
