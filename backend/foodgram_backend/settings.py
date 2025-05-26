@@ -51,14 +51,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'rest_framework.authtoken',
-    'users',
     'rest_framework',
+    'rest_framework.authtoken',
     'djoser',
     'django_filters',
+    'corsheaders',
+    'users',
     'recipes',
     'urlshortner',
-    'corsheaders',
 ]
 
 MIDDLEWARE = [
