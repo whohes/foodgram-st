@@ -7,7 +7,6 @@ from .models import Recipe
 class IngredientSearchFilter(SearchFilter):
     search_param = 'name'
 
-
 class RecipeFilter(filters.FilterSet):
     is_favorited = filters.BooleanFilter(method='filter_is_favorited')
     is_in_shopping_cart = filters.BooleanFilter(
