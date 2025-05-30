@@ -52,6 +52,8 @@ docker exec foodgram_back python manage.py makemigrations users
 
 docker exec foodgram_back python manage.py makemigrations recipes
 
+docker compose exec backend python manage.py load_ingredients
+
 docker-compose exec backend python manage.py migrate
 
 docker-compose exec backend python manage.py collectstatic --noinput
