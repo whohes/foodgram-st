@@ -2,7 +2,12 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.core.validators import RegexValidator
 
-from .const import USERNAME_MAX_LENGTH
+from .const import (
+    USERNAME_MAX_LENGTH,
+    EMAIL_MAX_LENGTH,
+    FIRST_NAME_MAX_LENGTH,
+    LAST_NAME_MAX_LENGTH,
+)
 
 
 class CustomUser(AbstractUser):
@@ -11,7 +16,11 @@ class CustomUser(AbstractUser):
         default=None,
         null=True
     )
-    email = models.EmailField(unique=True)
+    email = models.EmailField(
+        'Email',
+        max_length=EMAIL_MAX_LENGTH,
+        unique=True,
+    )
     username = models.CharField(
         max_length=USERNAME_MAX_LENGTH,
         unique=True,
@@ -25,6 +34,14 @@ class CustomUser(AbstractUser):
                 code="invalid_username",
             )
         ],
+    )
+    first_name = models.CharField(
+        'Имя',
+        max_length=FIRST_NAME_MAX_LENGTH,
+    )
+    last_name = models.CharField(
+        'Фамилия',
+        max_length=LAST_NAME_MAX_LENGTH,
     )
 
     USERNAME_FIELD = 'email'

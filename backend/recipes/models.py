@@ -111,3 +111,6 @@ class ShoppingCart(models.Model):
                 fields=["user", "recipe"], name="unique user recipe shopping_cart"
             )
         ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.recipe.name} (в корзине)"

@@ -1,19 +1,30 @@
-from rest_framework import viewsets
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework import permissions, status
-from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponse
 from django.db.models import Sum
 
+from rest_framework import viewsets, permissions, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from django_filters.rest_framework import DjangoFilterBackend
+
 from urlshortner.utils import shorten_url
 
+from users.serializers import ShortRecipeSerializer
 from .filters import IngredientSearchFilter, RecipeFilter
-from .serializers import IngredientSerializer, RecipeSerializer, RecipeCreateSerializer
-from .models import Favorite, Ingredient, IngredientInRecipe, Recipe, ShoppingCart
+from .serializers import (
+    IngredientSerializer,
+    RecipeSerializer,
+    RecipeCreateSerializer,
+)
+from .models import (
+    Favorite,
+    Ingredient,
+    IngredientInRecipe,
+    Recipe,
+    ShoppingCart
+)
+from api.pagination import CustomPagination
 from api.permissions import IsAuthorOrReadOnly
-from api.pagination import UserPagination
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
@@ -28,7 +39,7 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
-    pagination_class = UserPagination
+    pagination_class = CustomPagination
     permission_classes = (IsAuthorOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
@@ -47,13 +58,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
             if obj:
                 return Response(status=status.HTTP_400_BAD_REQUEST)
             model.objects.create(user=user, recipe=recipe)
+            serializer = ShortRecipeSerializer(recipe)
             return Response(
-                data={
-                    "id": recipe.id,
-                    "name": recipe.name,
-                    "image": recipe.image.url,
-                    "cooking_time": recipe.cooking_time,
-                },
+                data=serializer.data,
                 status=status.HTTP_201_CREATED,
             )
 

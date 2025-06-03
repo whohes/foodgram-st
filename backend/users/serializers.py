@@ -12,15 +12,17 @@ class CustomUserCreateSerializer(UserCreateSerializer):
         fields = ('email', 'id', 'username', 'first_name',
                  'last_name', 'password')
         extra_kwargs = {
-            'password': {'write_only': True}
+            'password': {'write_only': True},
+            'email': {'required': True},
+            'username': {'required': True},
+            'first_name': {'required': True},
+            'last_name': {'required': True}
         }
 
 
 class CustomUserSerializer(UserSerializer):
     is_subscribed = serializers.SerializerMethodField()
     avatar = serializers.SerializerMethodField()
-    first_name = serializers.CharField(required=True)
-    last_name = serializers.CharField(required=True)
 
     class Meta(UserSerializer.Meta):
         model = CustomUser
@@ -31,7 +33,7 @@ class CustomUserSerializer(UserSerializer):
         request = self.context.get('request')
         if not request or request.user.is_anonymous:
             return False
-        return Subscription.objects.filter(user=request.user, following=obj).exists()
+        return obj.followers.filter(user=request.user).exists()
 
     def get_avatar(self, obj):
         if obj.avatar:
@@ -46,16 +48,10 @@ class AvatarSerializer(serializers.ModelSerializer):
         model = CustomUser
         fields = ('avatar',)
 
-    def update(self, instance, validated_data):
-        avatar = validated_data.get('avatar')
-        if avatar is None:
-            raise serializers.ValidationError(
-                {'avatar': 'Avatar is required.'}
-            )
-
-        instance.avatar = avatar
-        instance.save()
-        return instance
+    def validate_avatar(self, value):
+        if not value:
+            raise serializers.ValidationError('Avatar is required.')
+        return value
 
 
 class ShortRecipeSerializer(serializers.ModelSerializer):

@@ -7,6 +7,14 @@ from .models import (Favorite, Ingredient, IngredientInRecipe,
                      Recipe, ShoppingCart)
 
 
+class IngredientAmountValidator:
+    def __call__(self, value):
+        if value <= 0:
+            raise serializers.ValidationError(
+                'Количество ингредиента должно быть больше нуля'
+            )
+
+
 class IngredientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ingredient
@@ -24,6 +32,7 @@ class IngredientInRecipeSerializer(serializers.ModelSerializer):
         source='ingredient.measurement_unit',
         read_only=True
     )
+    amount = serializers.IntegerField(validators=[IngredientAmountValidator()])
 
     class Meta:
         model = IngredientInRecipe
@@ -43,13 +52,25 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             'ingredients', 'name', 'image', 'text', 'cooking_time'
         )
 
+    def validate_ingredients(self, value):
+        if not value:
+            raise serializers.ValidationError(
+                'У рецепта должен быть хотя бы один ингредиент'
+            )
+        
+        seen_ingredients = set()
+        for item in value:
+            ingredient = item['ingredient']
+            if ingredient.id in seen_ingredients:
+                raise serializers.ValidationError(
+                    'Ингредиенты должны быть уникальными'
+                )
+            seen_ingredients.add(ingredient.id)
+        return value
+
     @transaction.atomic
     def create(self, validated_data):
         ingredient_data = validated_data.pop('ingredient_amounts')
-        if not ingredient_data:
-            raise serializers.ValidationError(
-                {'ingredients': 'У рецепта должен быть хотя бы один ингредиент'}
-            )
         recipe = Recipe.objects.create(**validated_data)
         self._set_ingredients(recipe, ingredient_data)
         return recipe
@@ -75,33 +96,10 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         ])
 
     def validate(self, data):
-        ingredients = self.initial_data.get('ingredients')
-        if not ingredients:
-            raise serializers.ValidationError(
-                {'ingredients': 'У рецепта должен быть хотя бы один ингредиент'}
-            )
-
-        seen_ingredients = set()
-        for ingr in ingredients:
-            ingr_id = ingr.get('id')
-            ingr_amount = ingr.get('amount')
-
-            if ingr_id in seen_ingredients:
-                raise serializers.ValidationError(
-                    {'ingredients': 'Ингредиенты должны быть уникальными'}
-                )
-            seen_ingredients.add(ingr_id)
-
-            if int(ingr_amount) <= 0:
-                raise serializers.ValidationError(
-                    {'amount': 'Количество ингредиента должно быть больше нуля'}
-                )
-            
         if self.instance is None and not data.get('image'):
             raise serializers.ValidationError(
                 {'image': 'У рецепта должна быть картинка'}
             )
-            
         return data
 
 
@@ -112,7 +110,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         read_only=True
     )
     author = CustomUserSerializer(read_only=True)
-    image = serializers.SerializerMethodField()
+    image = Base64ImageField()
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
 
@@ -125,11 +123,6 @@ class RecipeSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'author', 'is_favorited',
                             'is_in_shopping_cart')
 
-    def get_image(self, obj):
-        if obj.image:
-            return obj.image.url
-        return None
-
     def get_is_favorited(self, obj):
         request = self.context.get('request')
         if not request or request.user.is_anonymous:
@@ -141,8 +134,3 @@ class RecipeSerializer(serializers.ModelSerializer):
         if not request or request.user.is_anonymous:
             return False
         return obj.in_cart.filter(user=request.user).exists()
-
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        representation['image'] = instance.image.url
-        return representation
