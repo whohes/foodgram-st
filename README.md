@@ -48,11 +48,10 @@ docker-compose up -d --build
 ### 4. Применение миграций и сбор статики
 
 ```bash
-docker exec foodgram_back python manage.py makemigrations users
 
-docker exec foodgram_back python manage.py makemigrations recipes
+docker-compose exec backend python manage.py migrate users
 
-docker-compose exec backend python manage.py migrate
+docker-compose exec backend python manage.py migrate recipes
 
 docker compose exec backend python manage.py load_ingredients
 
