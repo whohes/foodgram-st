@@ -1,3 +1,5 @@
+import logging
+
 from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -6,14 +8,6 @@ from djoser.views import UserViewSet as DjoserUserViewSet
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
-import logging
-
-logger = logging.getLogger(__name__)
-
-from rest_framework import viewsets, permissions, status
-from rest_framework.decorators import action, api_view
-from rest_framework.response import Response
-from rest_framework.pagination import PageNumberPagination
 
 from recipes.models import (
     Favorite,
@@ -23,8 +17,9 @@ from recipes.models import (
     ShoppingCart
 )
 from users.models import CustomUser, Subscription
-from .pagination import Pagination
 from .filters import IngredientSearchFilter, RecipeFilter
+from .pagination import Pagination
+from .permissions import IsAuthorOrReadOnly
 from .serializers import (
     IngredientSerializer,
     RecipeSerializer,
@@ -34,8 +29,8 @@ from .serializers import (
     SubscriptionUserSerializer,
     AvatarSerializer
 )
-from .permissions import IsAuthorOrReadOnly
 
+logger = logging.getLogger(__name__)
 
 @api_view(['GET'])
 def copy_short_link(request, pk):
