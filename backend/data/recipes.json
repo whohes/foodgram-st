@@ -1,0 +1,80 @@
+[
+  {
+    "name": "Борщ",
+    "text": "Борщ, ясен-красен:)",
+    "cooking_time": 120,
+    "author": "ivan",
+    "ingredients": [
+      {
+        "name": "свекла",
+        "amount": 400
+      },
+      {
+        "name": "капуста белокочанная",
+        "amount": 300
+      },
+      {
+        "name": "картофель",
+        "amount": 400
+      },
+      {
+        "name": "морковь",
+        "amount": 200
+      },
+      {
+        "name": "лук репчатый",
+        "amount": 200
+      },
+      {
+        "name": "говядина",
+        "amount": 500
+      },
+      {
+        "name": "томатная паста",
+        "amount": 100
+      },
+      {
+        "name": "соль",
+        "amount": 10
+      },
+      {
+        "name": "перец черный",
+        "amount": 5
+      }
+    ],
+    "image": "photos/borsch.jpg"
+  },
+  {
+    "name": "Блины",
+    "text": "Первый всегда комом",
+    "cooking_time": 45,
+    "author": "maria",
+    "ingredients": [
+      {
+        "name": "молоко",
+        "amount": 500
+      },
+      {
+        "name": "яйца куриные",
+        "amount": 3
+      },
+      {
+        "name": "мука пшеничная",
+        "amount": 250
+      },
+      {
+        "name": "масло растительное",
+        "amount": 50
+      },
+      {
+        "name": "сахар",
+        "amount": 30
+      },
+      {
+        "name": "соль",
+        "amount": 5
+      }
+    ],
+    "image": "photos/blini.jpg"
+  }
+] 

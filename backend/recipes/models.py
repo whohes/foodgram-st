@@ -3,7 +3,7 @@ from django.core.validators import MinValueValidator
 from django.utils import timezone
 
 from users.models import CustomUser
-from .const import (
+from api.constants import (
     INGREDIENT_NAME_MAX_LENGTH,
     RECIPE_NAME_MAX_LENGTH,
     UNIT_MAX_LENGTH,

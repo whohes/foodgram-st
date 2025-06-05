@@ -1,0 +1,16 @@
+[
+  {
+    "email": "ivan@foodgram.ru",
+    "username": "ivan",
+    "first_name": "Иван",
+    "last_name": "Петров",
+    "password": "foodgram123"
+  },
+  {
+    "email": "maria@foodgram.ru",
+    "username": "maria",
+    "first_name": "Мария",
+    "last_name": "Иванова",
+    "password": "foodgram123"
+  }
+] 

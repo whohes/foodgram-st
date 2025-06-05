@@ -5,7 +5,7 @@ import django.db.models.deletion
 import django.utils.timezone
 from django.core.validators import RegexValidator
 
-from users.const import (
+from api.constants import (
     USERNAME_MAX_LENGTH,
     EMAIL_MAX_LENGTH,
     FIRST_NAME_MAX_LENGTH,
