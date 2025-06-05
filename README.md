@@ -53,6 +53,8 @@ docker-compose exec backend python manage.py migrate users
 
 docker-compose exec backend python manage.py migrate recipes
 
+docker-compose exec backend python manage.py migrate 
+
 docker compose exec backend python manage.py load_ingredients
 
 docker-compose exec backend python manage.py collectstatic --noinput
