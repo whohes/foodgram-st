@@ -3,7 +3,7 @@ from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 from djoser.serializers import UserCreateSerializer, UserSerializer
 
-from recipes.models import (Favorite, Ingredient, IngredientInRecipe, Recipe, ShoppingCart)
+from recipes.models import (Ingredient, IngredientInRecipe, Recipe)
 from users.models import CustomUser, Subscription
 from .constants import MIN_AMOUNT, AMOUNT_ERROR
 

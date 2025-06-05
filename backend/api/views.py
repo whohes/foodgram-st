@@ -1,8 +1,11 @@
-from django.shortcuts import get_object_or_404, redirect
-from django.http import HttpResponse
 from django.db.models import Sum
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet as DjoserUserViewSet
-from django.urls import reverse
+from rest_framework import viewsets, permissions, status
+from rest_framework.decorators import action, api_view
+from rest_framework.response import Response
 import logging
 
 logger = logging.getLogger(__name__)
@@ -10,7 +13,6 @@ logger = logging.getLogger(__name__)
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
-from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.pagination import PageNumberPagination
 
 from recipes.models import (
@@ -37,7 +39,6 @@ from .permissions import IsAuthorOrReadOnly
 
 @api_view(['GET'])
 def copy_short_link(request, pk):
-    """Получение короткой ссылки на рецепт."""
     recipe = get_object_or_404(Recipe, id=pk)
     return Response({
         'short-link': request.build_absolute_uri(f'/recipes/{recipe.id}/')
@@ -176,29 +177,15 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
-    queryset = Recipe.objects.all().order_by('-id')
+    queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
     pagination_class = Pagination
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
     permission_classes = [permissions.AllowAny]
 
-    def list(self, request, *args, **kwargs):
-        """
-        Переопределяем метод list для обеспечения совместимости с фронтендом.
-        """
-        queryset = self.get_queryset()
-        page = self.paginate_queryset(queryset)
-        
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-        
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
-
     def get_queryset(self):
-        queryset = Recipe.objects.all().order_by('-id').select_related(
+        queryset = Recipe.objects.all().select_related(
             'author'
         ).prefetch_related(
             'ingredients',
@@ -218,7 +205,21 @@ class RecipeViewSet(viewsets.ModelViewSet):
             if author:
                 queryset = queryset.filter(author_id=author)
         
-        return queryset
+        return queryset.order_by('-id')
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            'count': queryset.count(),
+            'results': serializer.data
+        })
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
