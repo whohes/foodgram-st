@@ -66,6 +66,7 @@ docker-compose exec backend python manage.py collectstatic --noinput
 docker-compose exec backend python manage.py createsuperuser
 ```
 ### 5.1 Создание пользователей и добавление их рецептов
+Если не отображаются рецепты, нужно открыть вкладку в режиме инкогнито
 
 ```bash
 docker-compose exec backend python manage.py load_users
