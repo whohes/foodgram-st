@@ -16,7 +16,7 @@ class Command(BaseCommand):
             for item in data:
                 _, created = Ingredient.objects.get_or_create(
                     name=item['name'],
-                    defaults={'measurement_unit': item['measurement_unit']}
+                    measurement_unit=item['measurement_unit']
                 )
                 if created:
                     created_count += 1

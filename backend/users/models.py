@@ -2,38 +2,39 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.core.validators import RegexValidator
 
-from api.constants import (
+from .constants import (
     USERNAME_MAX_LENGTH,
     EMAIL_MAX_LENGTH,
     FIRST_NAME_MAX_LENGTH,
-    LAST_NAME_MAX_LENGTH,
+    LAST_NAME_MAX_LENGTH
 )
 
 
-class CustomUser(AbstractUser):
+class User(AbstractUser):
     avatar = models.ImageField(
         upload_to='users/avatars/',
-        default=None,
-        null=True
+        blank=True,
+        null=True,
+        verbose_name='Аватар'
     )
     email = models.EmailField(
         'Email',
         max_length=EMAIL_MAX_LENGTH,
         unique=True,
     )
-    username = models.CharField(
-        max_length=USERNAME_MAX_LENGTH,
-        unique=True,
-        validators=[
-            RegexValidator(
-                regex=(r"^[\w.@+-]+$"),
-                message=(
-                    "Имя пользователя может содержать только буквы, "
-                    "цифры и знаки @/./+/-/_"
-                ),
-                code="invalid_username",
-            )
-        ],
+    username = models.CharField( 
+        max_length=USERNAME_MAX_LENGTH, 
+        unique=True, 
+        validators=[ 
+            RegexValidator( 
+                regex=(r"^[\w.@+-]+$"), 
+                message=( 
+                    "Имя пользователя может содержать только буквы, " 
+                    "цифры и знаки @/./+/-/_" 
+                ), 
+                code="invalid_username", 
+            ) 
+        ], 
     )
     first_name = models.CharField(
         'Имя',
@@ -53,9 +54,9 @@ class CustomUser(AbstractUser):
 
 class Subscription(models.Model):
     user = models.ForeignKey(
-        CustomUser, on_delete=models.CASCADE, related_name='subscriptions')
+        User, on_delete=models.CASCADE, related_name='subscriptions')
     following = models.ForeignKey(
-        CustomUser, on_delete=models.CASCADE, related_name='followers')
+        User, on_delete=models.CASCADE, related_name='followers')
 
     class Meta:
         verbose_name = 'Подписка'

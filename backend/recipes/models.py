@@ -2,8 +2,8 @@ from django.db import models
 from django.core.validators import MinValueValidator
 from django.utils import timezone
 
-from users.models import CustomUser
-from api.constants import (
+from users.models import User
+from recipes.constants import (
     INGREDIENT_NAME_MAX_LENGTH,
     RECIPE_NAME_MAX_LENGTH,
     UNIT_MAX_LENGTH,
@@ -14,7 +14,7 @@ from api.constants import (
 
 class Ingredient(models.Model):
     name = models.CharField(
-        "Название", max_length=INGREDIENT_NAME_MAX_LENGTH, unique=True
+        "Название", max_length=INGREDIENT_NAME_MAX_LENGTH
     )
     measurement_unit = models.CharField("Единица измерения", max_length=UNIT_MAX_LENGTH)
 
@@ -35,7 +35,7 @@ class Ingredient(models.Model):
 
 class Recipe(models.Model):
     author = models.ForeignKey(
-        CustomUser, on_delete=models.CASCADE, related_name="recipes"
+        User, on_delete=models.CASCADE, related_name="recipes"
     )
     name = models.CharField("Название", max_length=RECIPE_NAME_MAX_LENGTH)
     image = models.ImageField("Фото", upload_to="recipes/")
@@ -79,7 +79,7 @@ class IngredientInRecipe(models.Model):
 
 
 class Favorite(models.Model):
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     recipe = models.ForeignKey(
         Recipe, on_delete=models.CASCADE, related_name="favorites"
     )
@@ -100,7 +100,7 @@ class Favorite(models.Model):
 
 
 class ShoppingCart(models.Model):
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name="in_cart")
 
     class Meta:

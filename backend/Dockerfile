@@ -8,4 +8,9 @@ RUN pip install -r requirements.txt --no-cache-dir
 
 COPY . .
 
-CMD [ "gunicorn", "--bind", "0.0.0.0:8000", "foodgram_backend.wsgi"]
+# Convert script.sh to Unix line endings and make it executable
+RUN sed -i 's/\r$//' script.sh && \
+    chmod +x script.sh
+
+# Use script.sh as entrypoint
+ENTRYPOINT ["/bin/sh", "script.sh"]

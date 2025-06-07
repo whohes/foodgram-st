@@ -3,7 +3,7 @@ import json
 from django.core.management.base import BaseCommand
 from django.contrib.auth.hashers import make_password
 
-from users.models import CustomUser
+from users.models import User
 
 
 class Command(BaseCommand):
@@ -13,13 +13,12 @@ class Command(BaseCommand):
         try:
             with open('data/users.json', 'r', encoding='utf-8') as file:
                 data = json.load(file)
-                for item in data:
+            for item in data:
                     try:
-                        # Проверяем, существует ли пользователь
-                        if not CustomUser.objects.filter(
+                        if not User.objects.filter(
                             username=item['username']
                         ).exists():
-                            user = CustomUser.objects.create(
+                            user = User.objects.create(
                                 email=item['email'],
                                 username=item['username'],
                                 first_name=item['first_name'],
@@ -47,11 +46,5 @@ class Command(BaseCommand):
             self.stdout.write(
                 self.style.ERROR(
                     'File data/users.json not found'
-                )
-            )
-        except json.JSONDecodeError:
-            self.stdout.write(
-                self.style.ERROR(
-                    'Invalid JSON in data/users.json'
                 )
             ) 

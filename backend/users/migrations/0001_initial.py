@@ -4,7 +4,7 @@ import django.db.models.deletion
 import django.utils.timezone
 from django.core.validators import RegexValidator
 
-from api.constants import (
+from users.constants import (
     USERNAME_MAX_LENGTH,
     EMAIL_MAX_LENGTH,
     FIRST_NAME_MAX_LENGTH,
@@ -22,7 +22,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='CustomUser',
+            name='User',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('password', models.CharField(max_length=128, verbose_name='password')),

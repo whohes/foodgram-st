@@ -16,7 +16,7 @@ from recipes.models import (
     Recipe,
     ShoppingCart
 )
-from users.models import CustomUser, Subscription
+from users.models import User, Subscription
 from .filters import IngredientSearchFilter, RecipeFilter
 from .pagination import Pagination
 from .permissions import IsAuthorOrReadOnly
@@ -25,7 +25,7 @@ from .serializers import (
     RecipeSerializer,
     RecipeCreateSerializer,
     ShortRecipeSerializer,
-    CustomUserSerializer,
+    UserSerializer,
     SubscriptionUserSerializer,
     AvatarSerializer
 )
@@ -42,8 +42,8 @@ def copy_short_link(request, pk):
 
 class UserProfileViewSet(DjoserUserViewSet):
     pagination_class = Pagination
-    serializer_class = CustomUserSerializer
-    queryset = CustomUser.objects.all().order_by('id')
+    serializer_class = UserSerializer
+    queryset = User.objects.all().order_by('id')
     lookup_field = 'id'
     lookup_url_kwarg = 'id'
 
@@ -101,10 +101,11 @@ class UserProfileViewSet(DjoserUserViewSet):
     @action(
         methods=['get'],
         detail=False,
+        permission_classes=[permissions.IsAuthenticated],
         url_path='subscriptions'
     )
     def subscriptions(self, request):
-        followed_users = CustomUser.objects.filter(
+        followed_users = User.objects.filter(
             followers__user=request.user
         ).order_by('id')
         page = self.paginate_queryset(followed_users)
@@ -121,7 +122,7 @@ class UserProfileViewSet(DjoserUserViewSet):
         url_path='subscribe'
     )
     def subscribe(self, request, id=None):
-        author = get_object_or_404(CustomUser, id=id)
+        author = get_object_or_404(User, id=id)
         user = request.user
 
         if request.method == 'POST':
@@ -131,9 +132,7 @@ class UserProfileViewSet(DjoserUserViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            subscription, created = Subscription.objects.get_or_create(
-                user=user, following=author
-            )
+            subscription, created = author.followers.get_or_create(user=user)
             
             if not created:
                 return Response(
@@ -150,9 +149,7 @@ class UserProfileViewSet(DjoserUserViewSet):
                 status=status.HTTP_201_CREATED
             )
 
-        subscription = Subscription.objects.filter(
-            user=user, following=author
-        ).first()
+        subscription = author.followers.filter(user=user).first()
         if subscription:
             subscription.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
@@ -180,51 +177,22 @@ class RecipeViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        queryset = Recipe.objects.all().select_related(
+        return Recipe.objects.all().select_related(
             'author'
         ).prefetch_related(
             'ingredients',
             'ingredient_amounts'
         )
-        
-        user = self.request.user
-        if user.is_authenticated:
-            is_favorited = self.request.query_params.get('is_favorited')
-            is_in_shopping_cart = self.request.query_params.get('is_in_shopping_cart')
-            author = self.request.query_params.get('author')
-            
-            if is_favorited:
-                queryset = queryset.filter(favorites__user=user)
-            if is_in_shopping_cart:
-                queryset = queryset.filter(in_cart__user=user)
-            if author:
-                queryset = queryset.filter(author_id=author)
-        
-        return queryset.order_by('-id')
-
-    def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-        page = self.paginate_queryset(queryset)
-        
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-        
-        serializer = self.get_serializer(queryset, many=True)
-        return Response({
-            'count': queryset.count(),
-            'results': serializer.data
-        })
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        context['request'] = self.request
+        context.update({'request': self.request})
         return context
 
     def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+        if self.action in ['update', 'partial_update', 'destroy']:
             return [IsAuthorOrReadOnly()]
-        return [permissions.AllowAny()]
+        return super().get_permissions()
 
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
