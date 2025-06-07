@@ -3,10 +3,9 @@ from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from rest_framework.validators import UniqueTogetherValidator
-from django.shortcuts import get_object_or_404
 
 from recipes.models import (Ingredient, IngredientInRecipe, Recipe)
-from api.constants import MIN_AMOUNT, AMOUNT_ERROR
+from api.constants import MIN_AMOUNT
 from users.models import User, Subscription
 
 

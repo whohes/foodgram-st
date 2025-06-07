@@ -16,7 +16,7 @@ from recipes.models import (
     Recipe,
     ShoppingCart
 )
-from users.models import User, Subscription
+from users.models import User
 from .filters import IngredientSearchFilter, RecipeFilter
 from .pagination import Pagination
 from .permissions import IsAuthorOrReadOnly
